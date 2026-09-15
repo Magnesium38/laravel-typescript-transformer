@@ -68,7 +68,7 @@ it('sorts HTTP methods in correct order', function () {
     expect(transformControllers())->toMatchSnapshot();
 });
 
-it('omits type parameters when action has no route parameters', function () {
+it('uses undefined route parameters when action has no route parameters', function () {
     $router = app('router');
 
     $router->get('simple', [TypedController::class, 'returnsPhpType']);

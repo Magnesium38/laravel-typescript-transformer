@@ -45,15 +45,16 @@ export function buildUrl(path: string, params?: RouteParams, options?: RouteOpti
 
     return (typeof baseUrl !== 'undefined' ? baseUrl : '') + '/' + url;
 }
-type ActionResult = RouteDefinition & {
+declare const actionTypes: unique symbol;
+export type ActionResult<Request = object, Response = object> = RouteDefinition & {
 url: string,
-};
-type ActionFunction<P extends RouteParams | undefined> = P extends undefined ? (options?: RouteOptions) => ActionResult : (params: P, options?: RouteOptions) => ActionResult;
-type ActionWithMethods<P extends RouteParams | undefined, M extends string> = ActionFunction<P> & { [K in M]: ActionFunction<P> };
-export function createActionWithMethods<P extends RouteParams | undefined = undefined, M extends string = string>(routes: MethodRoute[]): ActionWithMethods<P, M> {
+} & { [actionTypes]?: { request: Request; response: Response } };
+type ActionFunction<P extends RouteParams | undefined, Request = object, Response = object> = P extends undefined ? (options?: RouteOptions) => ActionResult<Request, Response> : (params: P, options?: RouteOptions) => ActionResult<Request, Response>;
+type ActionWithMethods<P extends RouteParams | undefined, M extends string, Request = object, Response = object> = ActionFunction<P, Request, Response> & { [K in M]: ActionFunction<P, Request, Response> };
+export function createActionWithMethods<P extends RouteParams | undefined = undefined, M extends string = string, Request = object, Response = object>(routes: MethodRoute[]): ActionWithMethods<P, M, Request, Response> {
     const defaultRoute = routes[0];
 
-    const createFn = (route: MethodRoute): ActionFunction<P> => {
+    const createFn = (route: MethodRoute): ActionFunction<P, Request, Response> => {
         return ((...args: [P?, RouteOptions?]) => {
             const params = args[0] && typeof args[0] === 'object' && !('query' in args[0])
                 ? args[0] as P
@@ -66,15 +67,15 @@ export function createActionWithMethods<P extends RouteParams | undefined = unde
                 url,
                 method: route.method,
             };
-        }) as ActionFunction<P>;
+        }) as ActionFunction<P, Request, Response>;
     };
 
     const fn = createFn(defaultRoute);
 
-    const methodVariants: Record<string, ActionFunction<P>> = {};
+    const methodVariants: Record<string, ActionFunction<P, Request, Response>> = {};
     for (const route of routes) {
         methodVariants[route.method.toLowerCase()] = createFn(route);
     }
 
-    return Object.assign(fn, methodVariants) as ActionWithMethods<P, M>;
+    return Object.assign(fn, methodVariants) as ActionWithMethods<P, M, Request, Response>;
 }

@@ -185,42 +185,57 @@ class GenerateControllerSupportAction
                 true,
             ),
 
+            (new Transformed(
+                new TypeScriptRaw('declare const actionTypes: unique symbol;'),
+                LaravelControllerReference::supportItem('actionTypes'),
+                [],
+                false,
+            ))->nameAs('actionTypes'),
+
             new Transformed(
                 new TypeScriptAlias(
-                    'ActionResult',
+                    new TypeScriptGeneric(new TypeScriptIdentifier('ActionResult'), [
+                        new TypeScriptGenericTypeParameter(new TypeScriptIdentifier('Request'), default: new TypeScriptObject([])),
+                        new TypeScriptGenericTypeParameter(new TypeScriptIdentifier('Response'), default: new TypeScriptObject([])),
+                    ]),
                     new TypeScriptIntersection([
                         new TypeScriptIdentifier('RouteDefinition'),
                         new TypeScriptObject([
                             new TypeScriptProperty('url', new TypeScriptString()),
                         ]),
+                        new TypeScriptRaw('{ [actionTypes]?: { request: Request; response: Response } }'),
                     ])
                 ),
                 LaravelControllerReference::supportItem('ActionResult'),
                 [],
-                false,
+                true,
             ),
 
             new Transformed(
                 new TypeScriptAlias(
                     new TypeScriptGeneric(
                         new TypeScriptIdentifier('ActionFunction'),
-                        [new TypeScriptGenericTypeParameter(
-                            new TypeScriptIdentifier('P'),
-                            extends: new TypeScriptUnion([new TypeScriptIdentifier('RouteParams'), new TypeScriptUndefined()])
-                        )]
+                        [
+                            new TypeScriptGenericTypeParameter(
+                                new TypeScriptIdentifier('P'),
+                                extends: new TypeScriptUnion([new TypeScriptIdentifier('RouteParams'), new TypeScriptUndefined()])
+                            ),
+                            new TypeScriptGenericTypeParameter(new TypeScriptIdentifier('Request'), default: new TypeScriptObject([])),
+                            new TypeScriptGenericTypeParameter(new TypeScriptIdentifier('Response'), default: new TypeScriptObject([])),
+                        ]
                     ),
                     new TypeScriptConditional(
                         TypeScriptOperator::extends(new TypeScriptIdentifier('P'), new TypeScriptUndefined()),
                         new TypeScriptCallable(
                             [new TypeScriptParameter('options', new TypeScriptIdentifier('RouteOptions'), isOptional: true)],
-                            new TypeScriptIdentifier('ActionResult')
+                            new TypeScriptGeneric(new TypeScriptIdentifier('ActionResult'), [new TypeScriptIdentifier('Request'), new TypeScriptIdentifier('Response')])
                         ),
                         new TypeScriptCallable(
                             [
                                 new TypeScriptParameter('params', new TypeScriptIdentifier('P')),
                                 new TypeScriptParameter('options', new TypeScriptIdentifier('RouteOptions'), isOptional: true),
                             ],
-                            new TypeScriptIdentifier('ActionResult')
+                            new TypeScriptGeneric(new TypeScriptIdentifier('ActionResult'), [new TypeScriptIdentifier('Request'), new TypeScriptIdentifier('Response')])
                         ),
                     )
                 ),
@@ -242,14 +257,16 @@ class GenerateControllerSupportAction
                                 new TypeScriptIdentifier('M'),
                                 extends: new TypeScriptString()
                             ),
+                            new TypeScriptGenericTypeParameter(new TypeScriptIdentifier('Request'), default: new TypeScriptObject([])),
+                            new TypeScriptGenericTypeParameter(new TypeScriptIdentifier('Response'), default: new TypeScriptObject([])),
                         ]
                     ),
                     new TypeScriptIntersection([
-                        new TypeScriptGeneric(new TypeScriptIdentifier('ActionFunction'), [new TypeScriptIdentifier('P')]),
+                        new TypeScriptGeneric(new TypeScriptIdentifier('ActionFunction'), [new TypeScriptIdentifier('P'), new TypeScriptIdentifier('Request'), new TypeScriptIdentifier('Response')]),
                         new TypeScriptMappedType(
                             'K',
                             new TypeScriptIdentifier('M'),
-                            new TypeScriptGeneric(new TypeScriptIdentifier('ActionFunction'), [new TypeScriptIdentifier('P')])
+                            new TypeScriptGeneric(new TypeScriptIdentifier('ActionFunction'), [new TypeScriptIdentifier('P'), new TypeScriptIdentifier('Request'), new TypeScriptIdentifier('Response')])
                         ),
                     ])
                 ),
@@ -273,6 +290,8 @@ class GenerateControllerSupportAction
                                 extends: new TypeScriptString(),
                                 default: new TypeScriptString()
                             ),
+                            new TypeScriptGenericTypeParameter(new TypeScriptIdentifier('Request'), default: new TypeScriptObject([])),
+                            new TypeScriptGenericTypeParameter(new TypeScriptIdentifier('Response'), default: new TypeScriptObject([])),
                         ]
                     ),
                     [
@@ -283,12 +302,12 @@ class GenerateControllerSupportAction
                     ],
                     new TypeScriptGeneric(
                         new TypeScriptIdentifier('ActionWithMethods'),
-                        [new TypeScriptIdentifier('P'), new TypeScriptIdentifier('M')]
+                        [new TypeScriptIdentifier('P'), new TypeScriptIdentifier('M'), new TypeScriptIdentifier('Request'), new TypeScriptIdentifier('Response')]
                     ),
                     new TypeScriptRaw(<<<'TS'
                         const defaultRoute = routes[0];
 
-                        const createFn = (route: MethodRoute): ActionFunction<P> => {
+                        const createFn = (route: MethodRoute): ActionFunction<P, Request, Response> => {
                             return ((...args: [P?, RouteOptions?]) => {
                                 const params = args[0] && typeof args[0] === 'object' && !('query' in args[0])
                                     ? args[0] as P
@@ -301,17 +320,17 @@ class GenerateControllerSupportAction
                                     url,
                                     method: route.method,
                                 };
-                            }) as ActionFunction<P>;
+                            }) as ActionFunction<P, Request, Response>;
                         };
 
                         const fn = createFn(defaultRoute);
 
-                        const methodVariants: Record<string, ActionFunction<P>> = {};
+                        const methodVariants: Record<string, ActionFunction<P, Request, Response>> = {};
                         for (const route of routes) {
                             methodVariants[route.method.toLowerCase()] = createFn(route);
                         }
 
-                        return Object.assign(fn, methodVariants) as ActionWithMethods<P, M>;
+                        return Object.assign(fn, methodVariants) as ActionWithMethods<P, M, Request, Response>;
                     TS),
                 ),
                 LaravelControllerReference::supportItem('createActionWithMethods'),

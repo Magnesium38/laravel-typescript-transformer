@@ -1,7 +1,7 @@
 export const TypedController = {
 returnsPhpType: createActionWithMethods<{
 user: string | number,
-}>([{ method: 'get', url: 'users/{user}' }]),
+}, string, TypedController.returnsPhpType.Request, TypedController.returnsPhpType.Response>([{ method: 'get', url: 'users/{user}' }]),
 } as const
 export namespace TypedController {
 export namespace returnsPhpType {

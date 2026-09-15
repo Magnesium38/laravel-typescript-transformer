@@ -1,24 +1,24 @@
-export const InvokableController = createActionWithMethods([{ method: 'get', url: 'invokable' }])
+export const InvokableController = createActionWithMethods<undefined, string, InvokableController.Request, InvokableController.Response>([{ method: 'get', url: 'invokable' }])
 export namespace InvokableController {
 export type Request = object;
 export type Response = object;
 }
 export const ResourceController = {
-index: createActionWithMethods([{ method: 'get', url: 'resource' }]),
-create: createActionWithMethods([{ method: 'get', url: 'resource/create' }]),
-store: createActionWithMethods([{ method: 'post', url: 'resource' }]),
+index: createActionWithMethods<undefined, string, ResourceController.index.Request, ResourceController.index.Response>([{ method: 'get', url: 'resource' }]),
+create: createActionWithMethods<undefined, string, ResourceController.create.Request, ResourceController.create.Response>([{ method: 'get', url: 'resource/create' }]),
+store: createActionWithMethods<undefined, string, ResourceController.store.Request, ResourceController.store.Response>([{ method: 'post', url: 'resource' }]),
 show: createActionWithMethods<{
 resource: string | number,
-}>([{ method: 'get', url: 'resource/{resource}' }]),
+}, string, ResourceController.show.Request, ResourceController.show.Response>([{ method: 'get', url: 'resource/{resource}' }]),
 edit: createActionWithMethods<{
 resource: string | number,
-}>([{ method: 'get', url: 'resource/{resource}/edit' }]),
+}, string, ResourceController.edit.Request, ResourceController.edit.Response>([{ method: 'get', url: 'resource/{resource}/edit' }]),
 update: createActionWithMethods<{
 resource: string | number,
-}>([{ method: 'put', url: 'resource/{resource}' }, { method: 'patch', url: 'resource/{resource}' }]),
+}, string, ResourceController.update.Request, ResourceController.update.Response>([{ method: 'put', url: 'resource/{resource}' }, { method: 'patch', url: 'resource/{resource}' }]),
 destroy: createActionWithMethods<{
 resource: string | number,
-}>([{ method: 'delete', url: 'resource/{resource}' }]),
+}, string, ResourceController.destroy.Request, ResourceController.destroy.Response>([{ method: 'delete', url: 'resource/{resource}' }]),
 } as const
 export namespace ResourceController {
 export namespace index {

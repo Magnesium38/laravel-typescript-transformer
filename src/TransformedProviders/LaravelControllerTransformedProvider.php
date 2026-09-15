@@ -34,6 +34,7 @@ use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptProperty;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptRaw;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptReference;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptString;
+use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptUndefined;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptUnion;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptVariableDeclaration;
 use Spatie\TypeScriptTransformer\Writers\ModuleWriter;
@@ -157,7 +158,30 @@ class LaravelControllerTransformedProvider extends LaravelRouterTransformedProvi
         foreach ($controller->routeController->actions as $action) {
             $types = $this->resolveControllerMethod($controller, $action->methodName);
 
-            $actionCallNodes[$action->methodName] = $this->buildActionCallNode($action);
+            $namespace = $controller->getTransformedName();
+            if (! $controller->routeController->invokable) {
+                $namespace .= '.' . (ReservedWords::isReserved($action->methodName) ? "_{$action->methodName}" : $action->methodName);
+            }
+
+            $actionCallNode = $this->buildActionCallNode($action);
+
+            if ($actionCallNode instanceof TypeScriptCallExpression
+                && $actionCallNode->callee instanceof TypeScriptReference
+                && $actionCallNode->callee->reference->getKey() === LaravelControllerReference::supportItem('createActionWithMethods')->getKey()
+            ) {
+                $actionCallNode = new TypeScriptCallExpression(
+                    $actionCallNode->callee,
+                    $actionCallNode->arguments,
+                    [
+                        $actionCallNode->genericTypes[0] ?? new TypeScriptUndefined(),
+                        $actionCallNode->genericTypes[1] ?? new TypeScriptString(),
+                        new TypeScriptRaw("{$namespace}.Request"),
+                        new TypeScriptRaw("{$namespace}.Response"),
+                    ],
+                );
+            }
+
+            $actionCallNodes[$action->methodName] = $actionCallNode;
 
             $actionTypeAliases[$action->methodName] = [
                 TypeScriptOperator::export(new TypeScriptAlias('Request', $types['request'] ?? new TypeScriptObject([]))),

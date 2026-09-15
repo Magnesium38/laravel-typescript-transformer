@@ -1,5 +1,5 @@
 export const TypedController = {
-returnsArrayShape: createActionWithMethods([{ method: 'get', url: 'shaped' }]),
+returnsArrayShape: createActionWithMethods<undefined, string, TypedController.returnsArrayShape.Request, TypedController.returnsArrayShape.Response>([{ method: 'get', url: 'shaped' }]),
 } as const
 export namespace TypedController {
 export namespace returnsArrayShape {
