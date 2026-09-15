@@ -50,6 +50,48 @@ TypeScript functions.
 
 You can find the full documentation [here](https://spatie.be/docs/typescript-transformer/v3/introduction).
 
+## Controller action payload types
+
+Generated controller action results carry the same request and response types as their existing
+namespace aliases. An application-owned helper can infer these types without naming each action's
+`Request` and `Response` aliases. For example, a fetch helper for endpoints that accept a JSON body:
+
+```ts
+import { type ActionResult, PostsController } from './controllers';
+
+async function sendJson<Request, Response>(
+    action: ActionResult<Request, Response>,
+    data: NoInfer<Request>,
+): Promise<Response> {
+    const response = await fetch(action.url, {
+        method: action.method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+    }
+
+    return await response.json() as Response;
+}
+
+// Given a store action accepting { title: string }:
+const post = await sendJson(PostsController.store(), { title: 'Hello' });
+// post is inferred as PostsController.store.Response.
+```
+
+`NoInfer` requires TypeScript 5.4+ and prevents the body from widening the request type inferred from
+the action. It is only used by this example, not the generated support. This helper assumes a JSON
+response; it does not validate response data, handle empty responses, or cover GET/HEAD requests.
+Authentication, CSRF handling, and other transport concerns remain the application's responsibility.
+
+The metadata is type-only: runtime results remain `{ url, method }`. Resolution is unchanged, including
+the `object` fallback when no Data request parameter is found. That fallback is not a no-body guarantee.
+Existing aliases and the factory's `P, M` generic positions are preserved. Differently typed action
+results may no longer be assignable to one another; use `RouteDefinition` for code that only needs a
+URL and method, or `ActionResult<unknown, unknown>` for a payload-agnostic action result.
+
 ## Testing
 
 ``` bash
